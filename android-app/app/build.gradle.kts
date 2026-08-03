@@ -20,12 +20,12 @@ val supabaseAnonKey = providers.gradleProperty("HOMEGUARD_SUPABASE_ANON_KEY")
 
 android {
     namespace = "com.noamjan.homeguard"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.noamjan.homeguard"
         minSdk = 26
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 4
         versionName = "0.4.0"
         buildConfigField("String", "DEFAULT_AGENT_URL", "\"http://10.0.2.2:8765\"")
@@ -102,3 +102,4 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
 }
+

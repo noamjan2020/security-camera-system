@@ -149,7 +149,7 @@ jobs:
           set +o pipefail
           yes | sdkmanager --licenses >/dev/null
           set -o pipefail
-          sdkmanager "platforms;android-37" "build-tools;36.0.0"
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - name: Restore Firebase configuration
         if: ${{ env.HOMEGUARD_GOOGLE_SERVICES_JSON_B64 != '' }}
@@ -169,3 +169,4 @@ jobs:
           name: HomeGuard-Android-APK
           path: android-app/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
