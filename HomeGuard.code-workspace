@@ -1,0 +1,18 @@
+{
+  "folders": [
+    {"name": "HomeGuard Root", "path": "."},
+    {"name": "Windows Agent", "path": "windows-agent"},
+    {"name": "Android App", "path": "android-app"},
+    {"name": "Backend", "path": "backend"}
+  ],
+  "settings": {
+    "python.defaultInterpreterPath": "${workspaceFolder:Windows Agent}\\.venv\\Scripts\\python.exe",
+    "python.testing.pytestEnabled": true,
+    "python.testing.pytestArgs": ["tests"],
+    "files.exclude": {
+      "**/__pycache__": true,
+      "**/.pytest_cache": true,
+      "**/.gradle": true
+    }
+  }
+}

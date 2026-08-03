@@ -1,0 +1,26 @@
+HomeGuard 0.4 build and test status
+===================================
+
+Updated: 2026-08-03
+
+Validated in this Linux session on the latest workspace:
+- Static/workspace/security checks: 419 PASS
+- Windows/Python automated tests: 44/44 PASS
+- Signaling server tests: 3/3 PASS
+- Android pure Kotlin security tests: PASS
+- TypeScript syntax checks: 5 files PASS
+- Python compilation: PASS
+
+Skipped because platform toolchains are not installed in this session:
+- Full Android Gradle/Compose compile, lint, unit tests, and APK packaging
+- Signaling TypeScript dependency build (node_modules unavailable)
+- Windows PyInstaller EXE packaging
+- Inno Setup installer packaging
+- Physical webcam, speaker, phone, FCM, Supabase, TURN, and mobile-data tests
+
+Real artifact generation is configured in:
+- scripts/build-windows.ps1
+- scripts/build-android.ps1
+- .github/workflows/build-artifacts.yml
+
+No fake APK, EXE, or installer is included. Build them on Windows/Android Studio or through the included GitHub Actions workflow, then follow TESTING-GUIDE.md.

@@ -1,0 +1,14 @@
+**/.env
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/build/
+**/dist/
+**/.gradle/
+**/local.properties
+*.db
+*.log
+*.key
+*.jks
+*.keystore
+windows-agent/data/

@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "homeguard-agent"
+version = "0.4.0"
+description = "Privacy-first Windows security camera agent"
+requires-python = ">=3.12,<3.14"
+dependencies = []
+
+[project.scripts]
+homeguard-agent = "homeguard_agent.cli:main"
+homeguard-desktop = "homeguard_agent.desktop:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

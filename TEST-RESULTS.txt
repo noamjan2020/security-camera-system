@@ -1,0 +1,16 @@
+HomeGuard 0.4 latest runnable validation
+========================================
+Date: 2026-08-03
+
+Static checks passed: 419
+Python compile: PASS
+Windows-agent tests: 44 passed
+Signaling tests: 3 passed
+Android pure Kotlin security checks: PASS
+TypeScript syntax checks: 5 files PASS
+
+Skipped in this environment:
+- Signaling TypeScript dependency build
+- Android Gradle compile/lint/APK
+- Windows EXE/installer packaging
+- Physical-device and deployed-cloud acceptance tests

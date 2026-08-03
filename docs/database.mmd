@@ -1,0 +1,17 @@
+erDiagram
+  USERS ||--o{ DEVICES : owns
+  USERS ||--o{ CAMERAS : owns
+  DEVICES ||--o{ CAMERAS : hosts
+  USERS ||--o{ EVENTS : owns
+  DEVICES ||--o{ EVENTS : creates
+  CAMERAS ||--o{ EVENTS : records
+  EVENTS ||--o{ EVENT_MEDIA : contains
+  DEVICES ||--o{ PUSH_TOKENS : registers
+  USERS ||--o{ REMOTE_COMMANDS : issues
+  DEVICES ||--o{ REMOTE_COMMANDS : receives
+  REMOTE_COMMANDS ||--o{ COMMAND_RECEIPTS : reports
+  DEVICES ||--o{ VOICE_MESSAGES : sends
+  DEVICES ||--o{ VOICE_MESSAGES : receives
+  DEVICES ||--o{ STREAM_SESSIONS : publishes
+  DEVICES ||--o{ STREAM_SESSIONS : views
+  USERS ||--o{ AUDIT_LOGS : records

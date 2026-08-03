@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; media-src blob:; img-src data:; connect-src 'none'">
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#d8e2f0;font-family:system-ui,sans-serif}
+    #video{width:100%;height:100%;object-fit:contain;background:#000}
+    #status{position:absolute;left:12px;bottom:12px;padding:7px 11px;border-radius:999px;background:rgba(7,10,16,.78);font-size:12px;backdrop-filter:blur(8px)}
+  </style>
+</head>
+<body>
+  <video id="video" autoplay playsinline muted></video>
+  <div id="status">Preparing secure stream…</div>
+<script>
+'use strict';
+let pc = null;
+let sessionId = '';
+let iceServers = [];
+let started = false;
+const video = document.getElementById('video');
+const statusNode = document.getElementById('status');
+
+function setStatus(value) {
+  statusNode.textContent = value;
+  try { HomeGuardNative.postMessage(JSON.stringify({action:'status', message:String(value).slice(0,160)})); } catch (_) {}
+}
+function requestId() {
+  return (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`).replaceAll('-','');
+}
+function post(action, payload={}) {
+  HomeGuardNative.postMessage(JSON.stringify({action, ...payload}));
+}
+function sendSignal(type, payload={}) {
+  post('signal', {message: JSON.stringify({sessionId, type, requestId:requestId(), payload})});
+}
+function createPeer() {
+  if (pc) return pc;
+  pc = new RTCPeerConnection({iceServers, bundlePolicy:'max-bundle'});
+  pc.addTransceiver('video', {direction:'recvonly'});
+  pc.ontrack = event => {
+    const stream = event.streams && event.streams[0] ? event.streams[0] : new MediaStream([event.track]);
+    video.srcObject = stream;
+    video.play().catch(()=>{});
+    setStatus('Live');
+  };
+  pc.onconnectionstatechange = () => {
+    const state = pc ? pc.connectionState : 'closed';
+    if (state === 'connected') setStatus('Live');
+    else if (state === 'connecting' || state === 'new') setStatus('Connecting…');
+    else if (state === 'failed') setStatus('Connection failed');
+    else if (state === 'disconnected') setStatus('Connection interrupted');
+    else if (state === 'closed') setStatus('Stream closed');
+  };
+  return pc;
+}
+function waitForIceComplete(connection) {
+  if (connection.iceGatheringState === 'complete') return Promise.resolve();
+  return new Promise(resolve => {
+    const timeout = setTimeout(resolve, 12000);
+    const listener = () => {
+      if (connection.iceGatheringState === 'complete') {
+        clearTimeout(timeout);
+        connection.removeEventListener('icegatheringstatechange', listener);
+        resolve();
+      }
+    };
+    connection.addEventListener('icegatheringstatechange', listener);
+  });
+}
+async function handleSignal(signal) {
+  if (!signal || signal.sessionId !== sessionId) return;
+  if (signal.type === 'offer') {
+    const connection = createPeer();
+    const payload = signal.payload || {};
+    if (payload.type !== 'offer' || typeof payload.sdp !== 'string') throw new Error('Invalid stream offer');
+    await connection.setRemoteDescription({type:'offer', sdp:payload.sdp});
+    const answer = await connection.createAnswer();
+    await connection.setLocalDescription(answer);
+    await waitForIceComplete(connection);
+    sendSignal('answer', {type:'answer', sdp:connection.localDescription.sdp});
+    setStatus('Connecting…');
+  } else if (signal.type === 'joined') {
+    setStatus(Number(signal.peers || 0) >= 2 ? 'Connecting…' : 'Waiting for PC…');
+  } else if (signal.type === 'peer_joined') {
+    setStatus('Connecting…');
+  } else if (signal.type === 'peer_left') {
+    setStatus('PC left the stream');
+    closePeer();
+  }
+}
+function closePeer() {
+  if (pc) { try { pc.close(); } catch (_) {} }
+  pc = null;
+  video.srcObject = null;
+}
+window.homeGuardStart = raw => {
+  if (started) return;
+  started = true;
+  const config = JSON.parse(raw);
+  sessionId = String(config.sessionId || '');
+  iceServers = Array.isArray(config.iceServers) ? config.iceServers : [];
+  if (!sessionId) { setStatus('Invalid stream session'); return; }
+  setStatus('Opening secure signaling…');
+  post('connect');
+};
+window.addEventListener('message', event => {
+  try {
+    const message = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+    if (message.action === 'signal') handleSignal(message.payload).catch(error => setStatus(error.message || 'Stream error'));
+    else if (message.action === 'socket_error') setStatus(message.message || 'Signaling failed');
+    else if (message.action === 'socket_closed') setStatus('Signaling closed');
+  } catch (_) { setStatus('Invalid signaling response'); }
+});
+window.addEventListener('pagehide', () => { sendSignal('leave'); closePeer(); post('close'); });
+</script>
+</body>
+</html>
