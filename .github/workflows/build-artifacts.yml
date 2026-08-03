@@ -145,7 +145,10 @@ jobs:
       - name: Install Android SDK packages
         shell: bash
         run: |
+          # GitHub enables pipefail. `yes` receives SIGPIPE after sdkmanager closes.
+          set +o pipefail
           yes | sdkmanager --licenses >/dev/null
+          set -o pipefail
           sdkmanager "platforms;android-37" "build-tools;36.0.0"
 
       - name: Restore Firebase configuration
