@@ -28,19 +28,39 @@ class WavRecorder(private val context: Context) {
     ) == PackageManager.PERMISSION_GRANTED
 
     fun start(maxSeconds: Int = 30): File {
-        check(hasPermission()) { "Microphone permission is required" }
+        if (
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.RECORD_AUDIO,
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            throw SecurityException("Microphone permission is required")
+        }
         check(recording.compareAndSet(false, true)) { "Recording already active" }
         val minBuffer = AudioRecord.getMinBufferSize(sampleRate, channelConfig, encoding)
         check(minBuffer > 0) { "Audio input is unavailable" }
         val bufferSize = maxOf(minBuffer * 2, 4096)
-        val recorder = AudioRecord(
-            MediaRecorder.AudioSource.MIC,
-            sampleRate,
-            channelConfig,
-            encoding,
-            bufferSize,
-        )
-        check(recorder.state == AudioRecord.STATE_INITIALIZED) { "Microphone could not be initialized" }
+        val recorder = try {
+            AudioRecord(
+                MediaRecorder.AudioSource.MIC,
+                sampleRate,
+                channelConfig,
+                encoding,
+                bufferSize,
+            )
+        } catch (error: SecurityException) {
+            recording.set(false)
+            throw SecurityException(
+                "Microphone permission was revoked before recording started",
+                error,
+            )
+        }
+
+        if (recorder.state != AudioRecord.STATE_INITIALIZED) {
+            recorder.release()
+            recording.set(false)
+            throw IllegalStateException("Microphone could not be initialized")
+        }
         val file = File(context.cacheDir, "homeguard_${System.currentTimeMillis()}.wav")
         outputFile = file
         audioRecord = recorder
