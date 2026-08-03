@@ -318,7 +318,12 @@ class CloudClient(context: Context) {
         launch.iceServers.forEach { server ->
             require(server.urls.isNotEmpty() && server.urls.size <= 8) { "Cloud returned invalid ICE server URLs" }
             server.urls.forEach { url ->
-                require(url.length <= 512 && url.lowercase().startsWith(listOf("stun:", "stuns:", "turn:", "turns:"))) {
+                val normalizedUrl = url.lowercase()
+                require(
+                    url.length <= 512 &&
+                        listOf("stun:", "stuns:", "turn:", "turns:")
+                            .any { prefix -> normalizedUrl.startsWith(prefix) }
+                ) {
                     "Cloud returned an unsupported ICE URL"
                 }
             }

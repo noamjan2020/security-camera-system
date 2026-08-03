@@ -109,29 +109,128 @@ private enum class Tab(val label: String, val symbol: String) {
 }
 
 @Composable
-fun HomeGuardRoot(viewModel: HomeViewModel, onScanPairingCode: () -> Unit) {
+fun HomeGuardRoot(
+    viewModel: HomeViewModel,
+    onScanPairingCode: () -> Unit,
+    appLocked: Boolean,
+    biometricEnabled: Boolean,
+    biometricAvailable: Boolean,
+    lockError: String?,
+    onUnlock: () -> Unit,
+    onSetBiometricEnabled: (Boolean) -> Unit,
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    val notificationPermission =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     LaunchedEffect(state.paired) {
-        if (state.paired && Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+        if (
+            state.paired &&
+            Build.VERSION.SDK_INT >= 33 &&
+            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+                PackageManager.PERMISSION_GRANTED
+        ) {
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 
     MaterialTheme(colorScheme = HomeGuardColors) {
         Surface(Modifier.fillMaxSize(), color = Night) {
-            if (!state.paired) {
-                PairingScreen(
-                    loading = state.loading,
-                    error = state.error,
-                    onScan = onScanPairingCode,
-                    onPastePairingLink = viewModel::pair,
-                    onDismissMessage = viewModel::clearMessage,
+            when {
+                appLocked -> {
+                    AppLockScreen(
+                        biometricAvailable = biometricAvailable,
+                        lockError = lockError,
+                        onUnlock = onUnlock,
+                    )
+                }
+
+                !state.paired -> {
+                    PairingScreen(
+                        loading = state.loading,
+                        error = state.error,
+                        onScan = onScanPairingCode,
+                        onPastePairingLink = viewModel::pair,
+                        onDismissMessage = viewModel::clearMessage,
+                    )
+                }
+
+                else -> {
+                    PairedApp(
+                        state = state,
+                        viewModel = viewModel,
+                        biometricEnabled = biometricEnabled,
+                        biometricAvailable = biometricAvailable,
+                        lockError = lockError,
+                        onSetBiometricEnabled = onSetBiometricEnabled,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppLockScreen(
+    biometricAvailable: Boolean,
+    lockError: String?,
+    onUnlock: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Night)
+            .padding(28.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Panel),
+            shape = RoundedCornerShape(28.dp),
+        ) {
+            Column(
+                modifier = Modifier.padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(CircleShape)
+                        .background(Green.copy(alpha = .16f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("●", color = Green, fontSize = 32.sp)
+                }
+
+                Spacer(Modifier.height(18.dp))
+                Text(
+                    text = "HomeGuard locked",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Black,
                 )
-            } else {
-                PairedApp(state, viewModel)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = if (biometricAvailable) {
+                        "Authenticate to view your cameras, events and controls."
+                    } else {
+                        "Biometric authentication is currently unavailable."
+                    },
+                    color = Muted,
+                )
+
+                if (!lockError.isNullOrBlank()) {
+                    Spacer(Modifier.height(14.dp))
+                    Text(lockError, color = Red)
+                }
+
+                Spacer(Modifier.height(22.dp))
+                Button(
+                    onClick = onUnlock,
+                    enabled = biometricAvailable,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Unlock HomeGuard")
+                }
             }
         }
     }
@@ -202,7 +301,14 @@ private fun PairingScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PairedApp(state: HomeUiState, viewModel: HomeViewModel) {
+private fun PairedApp(
+    state: HomeUiState,
+    viewModel: HomeViewModel,
+    biometricEnabled: Boolean,
+    biometricAvailable: Boolean,
+    lockError: String?,
+    onSetBiometricEnabled: (Boolean) -> Unit,
+) {
     var tab by remember { mutableStateOf(Tab.HOME) }
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.error, state.info) {
@@ -256,7 +362,14 @@ private fun PairedApp(state: HomeUiState, viewModel: HomeViewModel) {
                 Tab.EVENTS -> EventsTab(state, viewModel)
                 Tab.LIVE -> LiveTab(state, viewModel)
                 Tab.TALK -> TalkTab(state, viewModel)
-                Tab.SETTINGS -> SettingsTab(state, viewModel)
+                Tab.SETTINGS -> SettingsTab(
+                    state = state,
+                    viewModel = viewModel,
+                    biometricEnabled = biometricEnabled,
+                    biometricAvailable = biometricAvailable,
+                    lockError = lockError,
+                    onSetBiometricEnabled = onSetBiometricEnabled,
+                )
             }
             if (state.loading) Box(Modifier.fillMaxSize().background(Night.copy(alpha = .7f)), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         }
@@ -427,7 +540,14 @@ private fun TalkTab(state: HomeUiState, viewModel: HomeViewModel) {
 }
 
 @Composable
-private fun SettingsTab(state: HomeUiState, viewModel: HomeViewModel) {
+private fun SettingsTab(
+    state: HomeUiState,
+    viewModel: HomeViewModel,
+    biometricEnabled: Boolean,
+    biometricAvailable: Boolean,
+    lockError: String?,
+    onSetBiometricEnabled: (Boolean) -> Unit,
+) {
     var showDisconnect by remember { mutableStateOf(false) }
     var cloudEmail by remember(state.cloudEmail) { mutableStateOf(state.cloudEmail) }
     var cloudPassword by remember { mutableStateOf("") }
@@ -504,6 +624,39 @@ private fun SettingsTab(state: HomeUiState, viewModel: HomeViewModel) {
                 }
             }
         }
+        item { SectionTitle("App security") }
+        item {
+            SettingsCard(
+                title = "Biometric app lock",
+                body = when {
+                    biometricEnabled ->
+                        "HomeGuard locks after being in the background for 15 seconds."
+                    biometricAvailable ->
+                        "Protect cameras, events and remote controls with your device lock."
+                    else ->
+                        "Set up a fingerprint, face unlock or secure device credential first."
+                },
+            ) {
+                Button(
+                    onClick = { onSetBiometricEnabled(!biometricEnabled) },
+                    enabled = biometricAvailable || biometricEnabled,
+                ) {
+                    Text(
+                        if (biometricEnabled) {
+                            "Disable app lock"
+                        } else {
+                            "Enable app lock"
+                        }
+                    )
+                }
+
+                if (!lockError.isNullOrBlank()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(lockError, color = Red, fontSize = 12.sp)
+                }
+            }
+        }
+
         item { SectionTitle("Diagnostics") }
         item {
             SettingsCard("Debug logs", "Both the app and PC keep rotating logs with request IDs and failures. Secrets and authorization headers are redacted.") {
