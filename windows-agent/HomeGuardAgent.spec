@@ -27,7 +27,7 @@ hiddenimports += [
 ]
 
 a = Analysis(
-    ['src/homeguard_agent/desktop.py'],
+    ['homeguard_entry.py'],
     pathex=['src'],
     binaries=binaries,
     datas=datas,
