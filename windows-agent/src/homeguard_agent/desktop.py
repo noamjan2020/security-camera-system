@@ -199,6 +199,7 @@ class DesktopApp:
             port=self.settings.api_port,
             log_level="debug" if self.settings.debug else "info",
             access_log=False,
+            log_config=None,
         )
         self._server = uvicorn.Server(config)
         self._server_thread = threading.Thread(target=self._server.run, name="api-server", daemon=True)
