@@ -5,8 +5,6 @@ import android.app.Activity
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -121,8 +119,6 @@ fun HomeGuardRoot(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val notificationPermission =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     LaunchedEffect(state.paired) {
         if (
@@ -131,7 +127,10 @@ fun HomeGuardRoot(
             context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
                 PackageManager.PERMISSION_GRANTED
         ) {
-            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            (context as? Activity)?.requestPermissions(
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                1001,
+            )
         }
     }
 
