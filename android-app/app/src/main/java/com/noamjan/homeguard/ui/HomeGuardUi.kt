@@ -498,9 +498,7 @@ private fun LiveTab(state: HomeUiState, viewModel: HomeViewModel) {
 @Composable
 private fun TalkTab(state: HomeUiState, viewModel: HomeViewModel) {
     val context = LocalContext.current
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) viewModel.startRecording()
-    }
+
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(22.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -512,7 +510,12 @@ private fun TalkTab(state: HomeUiState, viewModel: HomeViewModel) {
             Modifier.size(170.dp).clip(CircleShape).background(if (state.recording) Red.copy(alpha = .18f) else Green.copy(alpha = .14f)).clickable {
                 if (state.recording) viewModel.stopRecording()
                 else if (viewModel.microphonePermissionGranted()) viewModel.startRecording()
-                else permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                else {
+                    (context as? Activity)?.requestPermissions(
+                        arrayOf(Manifest.permission.RECORD_AUDIO),
+                        1002,
+                    )
+                }
             },
             contentAlignment = Alignment.Center,
         ) {
